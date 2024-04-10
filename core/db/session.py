@@ -1,20 +1,30 @@
-from typing import Any
-
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.engine.url import URL
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import DeclarativeBase
 
 from core.config import settings
 
-async_engine = create_async_engine(str(settings.DB_URL), pool_pre_ping=True)
 
-async_session_maker = async_sessionmaker(
-    async_engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autocommit=False,
-    autoflush=False,
-)
+def new_async_engine(uri: URL) -> AsyncEngine:
+    return create_async_engine(
+        uri,
+        pool_pre_ping=True,
+        pool_size=5,
+        max_overflow=10,
+        pool_timeout=30.0,
+        pool_recycle=600,
+    )
 
 
-class Base(DeclarativeBase):
-    id: Any
+def get_async_session() -> AsyncSession:
+    async_engine = new_async_engine(settings.DB_URL)
+
+    return async_sessionmaker(async_engine, expire_on_commit=False)()
+
+
+class Base(DeclarativeBase): ...

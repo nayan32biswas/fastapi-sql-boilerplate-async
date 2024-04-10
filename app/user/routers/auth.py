@@ -36,7 +36,7 @@ async def registration(
     user = User(
         email=data.email,
         full_name=data.full_name,
-        hash_password=PasswordUtils.get_password_hash(data.password),
+        hashed_password=PasswordUtils.get_hashed_password(data.password),
         is_active=True,
         rstr=generate_rstr(31),
     )
@@ -54,9 +54,9 @@ async def handle_login(session: AsyncSession, email: str, password: str):
     user = await user_manager.get_user_by_email(email)
 
     if not user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User exists")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User not found")
 
-    if not PasswordUtils.verify_password(password, user.hash_password):
+    if not PasswordUtils.verify_password(password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid password")
 
     access_token = JWTProvider.create_access_token(id=user.id, rstr="temp")
@@ -77,7 +77,7 @@ async def swagger_login(
 
 
 @auth_router.post("/login")
-async def login(
+async def token_login(
     data: LoginIn,
     session: CurrentAsyncSession,
 ):
@@ -86,7 +86,7 @@ async def login(
     return token
 
 
-@auth_router.post("/refresh")
+@auth_router.post("/refresh-token")
 async def refresh_token(
     session: CurrentAsyncSession,
     data: RefreshTokenIn,
@@ -117,17 +117,17 @@ async def change_password(
     old_password = data.old_password
     new_password = data.new_password
 
-    if not PasswordUtils.verify_password(old_password, user.hash_password):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid password")
+    if not PasswordUtils.verify_password(old_password, user.hashed_password):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid password")
 
-    user.hash_password = PasswordUtils.get_password_hash(new_password)
+    user.hashed_password = PasswordUtils.get_hashed_password(new_password)
     await session.commit()
 
     return {"message": "Successfully change the password"}
 
 
 @auth_router.post("/forgot-password-request")
-async def get_me(
+async def forgot_password_request(
     session: CurrentAsyncSession,
     data: ForgotPasswordRequestIn,
 ):
