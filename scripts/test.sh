@@ -3,7 +3,4 @@
 set -e
 set -x
 
-coverage run -m pytest tests
-coverage combine
-coverage report --show-missing
-coverage html
+python -m pytest tests

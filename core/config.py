@@ -1,4 +1,5 @@
 import os
+from functools import lru_cache
 from pathlib import Path
 
 from pydantic_settings import BaseSettings
@@ -15,7 +16,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     APP_HOST: str = "0.0.0.0"
     APP_PORT: int = 8000
-    DB_URL: str = "postgresql+asyncpg://sqluser:passowrd@localhost:5432/fastapi_sql_db"
+    DB_URL: str = "postgresql+asyncpg://sqluser:password@localhost:5432/fastapi_sql_db"
 
     JWT_SECRET_KEY: str = "fastapi"
     JWT_ALGORITHM: str = "HS256"
@@ -24,7 +25,7 @@ class Settings(BaseSettings):
 
 
 class TestSettings(Settings):
-    DB_URL: str = "postgresql+asyncpg://sqluser:passowrd@localhost:5432/fastapi_sql_db"
+    DB_URL: str = "postgresql+asyncpg://sqluser:password@localhost:5432/fastapi_sql_db"
 
 
 class LocalSettings(Settings): ...
@@ -35,6 +36,7 @@ class ProductionSettings(Settings):
     ENV: str = "production"
 
 
+@lru_cache(maxsize=1)
 def get_settings():
     env = os.getenv("ENV", "local")
     config_type = {

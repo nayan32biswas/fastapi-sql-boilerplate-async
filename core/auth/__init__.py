@@ -3,7 +3,7 @@ import bcrypt
 
 class PasswordUtils:
     @classmethod
-    def get_password_hash(cls, password: str) -> str:
+    def get_hashed_password(cls, password: str) -> str:
         salt = bcrypt.gensalt()
         hashed_password = bcrypt.hashpw(password.encode("utf-8"), salt)
 
