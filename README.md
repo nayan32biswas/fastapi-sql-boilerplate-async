@@ -2,12 +2,32 @@
 
 Build the docker images
 
-`docker-compose build`
-
-Create Migration Script
-
-`docker-compose run server alembic revision --autogenerate -m "message"`
+```bash
+docker-compose build
+```
 
 Run Migration
 
-`docker-compose run server alembic upgrade head`
+```bash
+docker-compose run server alembic upgrade head
+```
+
+Run Backend server
+
+```bash
+docker-compose up server
+```
+
+Run pytest
+
+```bash
+docker-compose run --rm server ./scripts/test.sh
+```
+
+## Example Command
+
+Create Migration Script
+
+```bash
+docker-compose run server alembic revision --autogenerate -m "message"
+```
