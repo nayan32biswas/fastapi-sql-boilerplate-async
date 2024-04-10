@@ -1,0 +1,59 @@
+version: "3.8"
+
+# environment
+x-env-db: &db-env
+  POSTGRES_DB: "postgres"
+  POSTGRES_PASSWORD: "passowrd"
+  POSTGRES_USER: "root"
+
+x-volumes: &env-volume
+  ALLOWED_HOSTS: "*"
+  JWT_SECRET_KEY: "fastapi_sql_secret_key"
+
+  DB_URL: "postgresql+asyncpg://root:passowrd@db:5432/postgres"
+  DEBUG: "True"
+
+  <<: *db-env
+
+services:
+  server:
+    build:
+      context: ./
+      dockerfile: ./Dockerfile
+    image: nayanbiswas/fastapi_sql:latest
+    container_name: fastapi_sql_server
+    command: "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    ports:
+      - 8000:8000
+    environment:
+      <<: *env-volume
+    # env_file: .env
+    volumes:
+      - ./:/code
+    depends_on:
+      - db
+    networks:
+      - fastapi_sql_tier
+
+  db:
+    image: postgres:16
+    container_name: fastapi_sql_db
+    restart: unless-stopped
+    ports:
+      - 5432:5432
+    expose:
+      - 5432
+    networks:
+      - fastapi_sql_tier
+    volumes:
+      - fastapi_sql:/var/lib/postgresql/data
+    environment:
+      <<: *db-env
+
+volumes:
+  fastapi_sql:
+    driver: local
+
+networks:
+  fastapi_sql_tier:
+    driver: bridge
