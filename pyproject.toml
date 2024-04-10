@@ -67,8 +67,7 @@ lint.ignore = ["E501", "B008", "C901", "W191"]
 exclude = [
     "static",
     "media",
-    "**/migrations",
-    "**/development.py"
+    "migrations",
 ]
 
 [tool.ruff.lint.per-file-ignores]
