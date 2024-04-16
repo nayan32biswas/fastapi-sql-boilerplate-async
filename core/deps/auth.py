@@ -49,10 +49,10 @@ async def get_authenticated_user(
     user = await get_user(session, token_data)
 
     if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
+    if user.is_active is not True:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is not active")
 
     return user
 
@@ -65,6 +65,9 @@ async def get_authenticated_user_or_none(
         return None
 
     user = await get_user(session, token_data)
+
+    if user and user.is_active is not True:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is not active")
 
     return user
 

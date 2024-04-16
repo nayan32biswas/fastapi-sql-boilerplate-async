@@ -1,13 +1,29 @@
 from fastapi import APIRouter
 
-from app.user.schemas.user import UserMeOut
+from app.user.schemas.user import UserProfileIn, UserProfileOut
 from core.deps.auth import CurrentUser
+from core.deps.db import CurrentAsyncSession
+from core.utils.model import update_model
 
-user_router = APIRouter()
+router = APIRouter(prefix="/user")
 
 
-@user_router.get("/me", response_model=UserMeOut)
-async def get_me(
+@router.get("/profile", response_model=UserProfileOut)
+async def get_profile(
     user: CurrentUser,
 ):
-    return UserMeOut.model_validate(user)
+    return UserProfileOut.model_validate(user)
+
+
+@router.put("/profile", response_model=UserProfileOut)
+async def update_profile(
+    user: CurrentUser,
+    session: CurrentAsyncSession,
+    data: UserProfileIn,
+):
+    user = update_model(user, data)
+    await session.commit()
+
+    await session.refresh(user)
+
+    return UserProfileOut.model_validate(user)

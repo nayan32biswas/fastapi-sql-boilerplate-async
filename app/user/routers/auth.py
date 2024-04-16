@@ -20,10 +20,12 @@ from core.deps.db import CurrentAsyncSession
 from core.utils.string import generate_rstr
 from worker.tasks.email import send_email
 
-auth_router = APIRouter()
+router = APIRouter(
+    prefix="/auth",
+)
 
 
-@auth_router.post("/registration", status_code=status.HTTP_201_CREATED)
+@router.post("/registration", status_code=status.HTTP_201_CREATED)
 async def registration(
     data: RegistrationIn,
     session: CurrentAsyncSession,
@@ -69,7 +71,7 @@ async def handle_login(session: AsyncSession, email: str, password: str):
     return {"access_token": access_token, "refresh_token": refresh_token}
 
 
-@auth_router.post("/swagger-login")
+@router.post("/swagger-login")
 async def swagger_login(
     session: CurrentAsyncSession,
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -77,7 +79,7 @@ async def swagger_login(
     return await handle_login(session, form_data.username, form_data.password)
 
 
-@auth_router.post("/login")
+@router.post("/login")
 async def token_login(
     data: LoginIn,
     session: CurrentAsyncSession,
@@ -87,7 +89,7 @@ async def token_login(
     return token
 
 
-@auth_router.post("/refresh-token")
+@router.post("/refresh-token")
 async def refresh_token(
     session: CurrentAsyncSession,
     data: RefreshTokenIn,
@@ -109,7 +111,7 @@ async def refresh_token(
     return {"access_token": access_token}
 
 
-@auth_router.post("/change-password")
+@router.post("/change-password")
 async def change_password(
     user: CurrentUser,
     session: CurrentAsyncSession,
@@ -127,7 +129,7 @@ async def change_password(
     return {"message": "Successfully change the password"}
 
 
-@auth_router.post("/forgot-password-request")
+@router.post("/forgot-password-request")
 async def forgot_password_request(
     session: CurrentAsyncSession,
     data: ForgotPasswordRequestIn,
