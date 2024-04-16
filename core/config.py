@@ -25,6 +25,7 @@ class Settings(BaseSettings):
 
     CELERY_BROKER_URL: str = "redis://redis:6379/0"
     CELERY_BACKEND_URL: str = "redis://redis:6379/0"
+    CELERY_CONCURRENCY: int = 2
 
 
 class TestSettings(Settings):

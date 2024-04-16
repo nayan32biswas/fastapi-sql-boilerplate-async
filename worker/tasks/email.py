@@ -1,7 +1,7 @@
-from celery import shared_task
+from worker.main import celery_app
 
 
-@shared_task
-def send_email():
-    print("Successfully send the email...")
+@celery_app.task
+def send_email(*args, **kwargs):
+    print("Successfully send the email...", args, kwargs)
     return True

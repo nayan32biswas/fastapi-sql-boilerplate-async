@@ -40,7 +40,8 @@ services:
     image: nayanbiswas/fastapi_sql_server:latest
     container_name: fastapi_sql_worker
     restart: unless-stopped
-    command: celery -A neugrove --app=worker:celery_app worker --beat --loglevel=info
+    command: "watchmedo auto-restart --directory=./ --pattern=*.py --recursive -- \
+      celery --app=worker.main:celery_app worker --beat --loglevel=debug"
     environment:
       <<: *app-env
     volumes:

@@ -18,6 +18,7 @@ from core.auth.jwt import JWTProvider
 from core.deps.auth import CurrentUser
 from core.deps.db import CurrentAsyncSession
 from core.utils.string import generate_rstr
+from worker.tasks.email import send_email
 
 auth_router = APIRouter()
 
@@ -137,6 +138,6 @@ async def forgot_password_request(
 
     user: User = await user_manager.get_obj_or_404(email=email)
 
-    print(user)
+    send_email.delay(to=[user.email], subject="Forgot password request")
 
     return {"message": "Check your email inbox to set new password"}
