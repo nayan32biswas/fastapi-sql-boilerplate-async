@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 3600
     REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
+    CELERY_BROKER_URL: str = "redis://redis:6379/0"
+    CELERY_BACKEND_URL: str = "redis://redis:6379/0"
+    CELERY_CONCURRENCY: int = 2
+
 
 class TestSettings(Settings):
     DB_URL: str = "postgresql+asyncpg://sqluser:password@localhost:5432/fastapi_sql_db"

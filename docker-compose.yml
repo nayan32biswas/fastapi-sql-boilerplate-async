@@ -6,7 +6,7 @@ x-env-db: &db-env
   POSTGRES_PASSWORD: "password"
   POSTGRES_USER: "root"
 
-x-volumes: &env-volume
+x-volumes: &app-env
   ALLOWED_HOSTS: "*"
   JWT_SECRET_KEY: "fastapi_sql_secret_key"
 
@@ -20,18 +20,35 @@ services:
     build:
       context: ./
       dockerfile: ./Dockerfile
-    image: nayanbiswas/fastapi_sql:latest
+    image: nayanbiswas/fastapi_sql_server:latest
     container_name: fastapi_sql_server
     command: "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     ports:
       - 8000:8000
     environment:
-      <<: *env-volume
+      <<: *app-env
     # env_file: .env
     volumes:
       - ./:/code
     depends_on:
       - db
+      - redis
+    networks:
+      - fastapi_sql_tier
+
+  worker:
+    image: nayanbiswas/fastapi_sql_server:latest
+    container_name: fastapi_sql_worker
+    restart: unless-stopped
+    command: "watchmedo auto-restart --directory=./ --pattern=*.py --recursive -- \
+      celery --app=worker.main:celery_app worker --beat --loglevel=debug"
+    environment:
+      <<: *app-env
+    volumes:
+      - ./:/code
+    depends_on:
+      - db
+      - redis
     networks:
       - fastapi_sql_tier
 
@@ -46,12 +63,23 @@ services:
     networks:
       - fastapi_sql_tier
     volumes:
-      - fastapi_sql:/var/lib/postgresql/data
+      - fastapi_sql_db:/var/lib/postgresql/data
     environment:
       <<: *db-env
 
+  redis:
+    image: redis:7
+    container_name: fastapi_sql_redis
+    restart: unless-stopped
+    networks:
+      - fastapi_sql_tier
+    volumes:
+      - fastapi_sql_redis:/data
+
 volumes:
-  fastapi_sql:
+  fastapi_sql_db:
+    driver: local
+  fastapi_sql_redis:
     driver: local
 
 networks:

@@ -6,6 +6,7 @@ from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app import router as common_router
 from app.user.routers import router as user_router
 from core.config import settings
 from core.deps.logging import Logging
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 
 def init_routers(app_: FastAPI) -> None:
+    app_.include_router(common_router.router, tags=["Default"])
     app_.include_router(user_router)
 
 
