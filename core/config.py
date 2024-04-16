@@ -12,16 +12,14 @@ DB_ASYNC_TO_SYNC_MODULE = ("asyncpg", "psycopg2")  # postgresql
 
 
 class Settings(BaseSettings):
-    ENV: str = "development"
     DEBUG: bool = True
-    APP_HOST: str = "0.0.0.0"
-    APP_PORT: int = 8000
+    ENV: str = "development"
+    APP_HOST: str = "localhost:3000"
+    API_HOST: str = "localhost:8000"
+
     DB_URL: str = "postgresql+asyncpg://sqluser:password@localhost:5432/fastapi_sql_db"
 
     JWT_SECRET_KEY: str = "fastapi"
-    JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 3600
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 30
 
     CELERY_BROKER_URL: str = "redis://redis:6379/0"
     CELERY_BACKEND_URL: str = "redis://redis:6379/0"
