@@ -9,6 +9,7 @@ from fastapi import HTTPException, status
 from pydantic import BaseModel
 
 from core.config import settings
+from core.constants import ACCESS_TOKEN_EXPIRE_MINUTES, JWT_ALGORITHM, REFRESH_TOKEN_EXPIRE_DAYS
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,7 @@ class JWTProvider:
         payload["iat"] = time.time()
 
         try:
-            token = jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+            token = jwt.encode(payload, settings.JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
         except Exception as e:
             raise invalid_token from e
 
@@ -62,7 +63,7 @@ class JWTProvider:
             "token_type": TokenType.ACCESS,
         }
 
-        return cls._create_token(payload, timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
+        return cls._create_token(payload, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
 
     @classmethod
     def create_refresh_token(cls, id: int, rstr: str) -> str:
@@ -72,14 +73,14 @@ class JWTProvider:
             "token_type": TokenType.REFRESH,
         }
 
-        return cls._create_token(payload, timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS))
+        return cls._create_token(payload, timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS))
 
     @classmethod
     def _decode_token(cls, token: str) -> Dict[str, Any]:
         if not token:
             raise invalid_token
 
-        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
 
         if "token_type" not in payload:
             raise invalid_token

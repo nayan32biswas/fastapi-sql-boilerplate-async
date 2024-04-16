@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, EmailStr, Field
 
 
@@ -23,3 +25,9 @@ class PasswordChangeIn(BaseModel):
 
 class ForgotPasswordRequestIn(BaseModel):
     email: EmailStr = Field(..., description="Email")
+
+
+class ForgotPasswordResetIn(BaseModel):
+    token: str = Field(..., description="Token")
+    new_password: str = Field(..., description="New Password")
+    force_logout: Optional[bool] = Field(default=None, description="Logout from all devices")

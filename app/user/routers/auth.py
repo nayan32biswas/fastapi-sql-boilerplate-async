@@ -1,29 +1,37 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+from secrets import token_hex
 
+import sqlalchemy as sa
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio.session import AsyncSession
+from sqlalchemy.orm import joinedload
 
-from app.user.models import User
+from app.user.models import ForgotPassword, User
 from app.user.models_manager.user import UserManager
 from app.user.schemas.auth import (
     ForgotPasswordRequestIn,
+    ForgotPasswordResetIn,
     LoginIn,
     PasswordChangeIn,
     RefreshTokenIn,
     RegistrationIn,
 )
+from core import constants
 from core.auth import PasswordUtils
 from core.auth.jwt import JWTProvider
+from core.config import settings
 from core.deps.auth import CurrentUser
 from core.deps.db import CurrentAsyncSession
 from core.utils.string import generate_rstr
 from worker.tasks.email import send_email
 
-auth_router = APIRouter()
+router = APIRouter(
+    prefix="/auth",
+)
 
 
-@auth_router.post("/registration", status_code=status.HTTP_201_CREATED)
+@router.post("/registration", status_code=status.HTTP_201_CREATED)
 async def registration(
     data: RegistrationIn,
     session: CurrentAsyncSession,
@@ -69,7 +77,7 @@ async def handle_login(session: AsyncSession, email: str, password: str):
     return {"access_token": access_token, "refresh_token": refresh_token}
 
 
-@auth_router.post("/swagger-login")
+@router.post("/swagger-login")
 async def swagger_login(
     session: CurrentAsyncSession,
     form_data: OAuth2PasswordRequestForm = Depends(),
@@ -77,7 +85,7 @@ async def swagger_login(
     return await handle_login(session, form_data.username, form_data.password)
 
 
-@auth_router.post("/login")
+@router.post("/login")
 async def token_login(
     data: LoginIn,
     session: CurrentAsyncSession,
@@ -87,7 +95,7 @@ async def token_login(
     return token
 
 
-@auth_router.post("/refresh-token")
+@router.post("/refresh-token")
 async def refresh_token(
     session: CurrentAsyncSession,
     data: RefreshTokenIn,
@@ -109,7 +117,7 @@ async def refresh_token(
     return {"access_token": access_token}
 
 
-@auth_router.post("/change-password")
+@router.post("/change-password")
 async def change_password(
     user: CurrentUser,
     session: CurrentAsyncSession,
@@ -127,7 +135,7 @@ async def change_password(
     return {"message": "Successfully change the password"}
 
 
-@auth_router.post("/forgot-password-request")
+@router.post("/forgot-password-request")
 async def forgot_password_request(
     session: CurrentAsyncSession,
     data: ForgotPasswordRequestIn,
@@ -138,6 +146,60 @@ async def forgot_password_request(
 
     user: User = await user_manager.get_obj_or_404(email=email)
 
-    send_email.delay(to=[user.email], subject="Forgot password request")
+    expire_at = datetime.now() + timedelta(minutes=constants.FORGOT_PASSWORD_EXPIRE_MINUTES)
+
+    forgot_password_instance = ForgotPassword(
+        user_id=user.id,
+        email=data.email,
+        expire_at=expire_at,
+        token=token_hex(60),
+    )
+    session.add(forgot_password_instance)
+    await session.commit()
+
+    forgot_password_url = f"{settings.API_HOST}/{constants.FORGOT_PASSWORD_PATH}?token={forgot_password_instance.token}"
+
+    send_email.delay(
+        to=[user.email],
+        subject="Forgot password request",
+        data={
+            "url": forgot_password_url,
+        },
+    )
 
     return {"message": "Check your email inbox to set new password"}
+
+
+@router.post("/forgot-password-reset")
+async def forgot_password_reset(
+    session: CurrentAsyncSession,
+    data: ForgotPasswordResetIn,
+):
+    stmt = (
+        sa.select(ForgotPassword)
+        .where(ForgotPassword.token == data.token)
+        .options(joinedload(ForgotPassword.user))
+    )
+    result = await session.execute(stmt)
+    forgot_password_instance = result.scalars().first()
+    user = forgot_password_instance.user
+
+    if forgot_password_instance.is_used:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Token already used")
+
+    if forgot_password_instance.expire_at < datetime.now():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Token is expired")
+
+    forgot_password_instance.is_used = True
+    forgot_password_instance.used_at = datetime.now()
+
+    user.hashed_password = PasswordUtils.get_hashed_password(data.new_password)
+
+    if data.force_logout is True:
+        user.rstr = generate_rstr(31)
+
+    await session.commit()
+
+    send_email.delay(to=[user.email], subject="New password set")
+
+    return {"message": "Successfully reset password"}
