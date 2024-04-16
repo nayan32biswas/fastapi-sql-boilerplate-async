@@ -6,7 +6,7 @@ from fastapi.middleware import Middleware
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.common import router as common_router
+from app import router as common_router
 from app.user.routers import router as user_router
 from core.config import settings
 from core.deps.logging import Logging
