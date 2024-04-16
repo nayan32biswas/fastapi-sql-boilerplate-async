@@ -1,11 +1,12 @@
 from uuid import uuid4
 
+import sqlalchemy as sa
 from fastapi import status
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.main import app
-from app.user.models import User
+from app.user.models import ForgotPassword, User
 from core.auth import PasswordUtils
 from core.auth.jwt import JWTProvider
 from core.utils.string import generate_rstr
@@ -84,9 +85,39 @@ async def test_change_password(
     assert response.status_code, status.HTTP_403_FORBIDDEN
 
 
-async def test_forgot_password_request(client: AsyncClient, default_user: User):
-    url = app.url_path_for("forgot_password_request")
+async def test_forgot_password(client: AsyncClient, session: AsyncSession, default_user: User):
+    request_url = app.url_path_for("forgot_password_request")
 
     payload = {"email": default_user.email}
-    response = await client.post(url, json=payload)
+    response = await client.post(request_url, json=payload)
+
     assert response.status_code, status.HTTP_200_OK
+
+    stmt = (
+        sa.select(ForgotPassword)
+        .where(
+            ForgotPassword.user_id == default_user.id,
+            ForgotPassword.is_used == False,  # noqa: E712
+        )
+        .order_by(sa.desc(ForgotPassword.id))
+    )
+    result = await session.execute(stmt)
+    forgot_password_instance = result.scalars().first()
+
+    payload = {
+        "new_password": "new-pass",
+        "token": forgot_password_instance.token,
+    }
+
+    reset_url = app.url_path_for("forgot_password_reset")
+
+    response = await client.post(reset_url, json=payload)
+
+    assert response.status_code, status.HTTP_200_OK
+
+    await session.refresh(default_user)
+
+    assert PasswordUtils.verify_password(payload["new_password"], default_user.hashed_password)
+
+    default_user.hashed_password = PasswordUtils.get_hashed_password(default_user_password)
+    await session.commit()

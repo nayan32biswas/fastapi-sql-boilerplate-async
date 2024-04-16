@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "fastapi-sql-boilerplate"
+name = "fastapi-sql-boilerplate-async"
 version = "0.1.0"
 description = ""
 authors = ["nayan32biswas <nayan32biswas@gmail.com>"]
